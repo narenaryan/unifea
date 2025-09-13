@@ -1,0 +1,572 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Unifea Playground – Ligature Edition (No-Plus Vowels & Consonants)</title>
+<style>
+  :root { 
+    --bg:#0f1115; 
+    --card:#16181f; 
+    --ink:#eaeef2; 
+    --sub:#a8b3bd;
+    --accent:#3a6dfa;
+    --success:#9bd67d;
+    --warning:#f5a623;
+    --border:#2b2f3a;
+  }
+  * { box-sizing:border-box }
+  body { 
+    margin:0; 
+    font-family:ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; 
+    background:var(--bg); 
+    color:var(--ink);
+  }
+  header { padding:24px 24px 8px; text-align:center; }
+  header h1 { margin:0 0 6px 0; font-size:28px; }
+  header p { margin:0; color:var(--sub) }
+  main { max-width:1400px; margin:0 auto; padding:20px; display:grid; gap:20px; grid-template-columns:1fr 1fr; }
+  .card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:16px; }
+  textarea { width:100%; height:180px; background:#0b0d12; color:var(--ink); border:1px solid var(--border); border-radius:10px; padding:12px; font-size:16px; resize:vertical; font-family:ui-monospace, monospace; }
+  button { background:var(--accent); color:white; border:none; padding:10px 14px; border-radius:10px; cursor:pointer; font-weight:600; transition:all 0.2s; }
+  button:hover { opacity:0.9; transform:translateY(-1px); }
+  button.secondary { background:#2b2f3a; }
+  button.active { background:var(--success); color:#0f1115; }
+  .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+  pre { white-space:pre-wrap; font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background:#0b0d12; padding:12px; border-radius:10px; border:1px solid var(--border); }
+  
+  .visual-output { 
+    background:#0b0d12; 
+    padding:20px; 
+    border-radius:10px; 
+    border:1px solid var(--border);
+    min-height:180px;
+    display:flex;
+    align-items:center;
+    flex-wrap:wrap;
+    gap:12px;
+    font-family:'Courier New', monospace;
+  }
+  
+  /* Base glyph styles */
+  .glyph-base {
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    position:relative;
+    min-width:48px;
+    min-height:48px;
+    padding:8px;
+    border:1px solid var(--border);
+    border-radius:8px;
+    background:linear-gradient(135deg, #1a1d24 0%, #16181f 100%);
+  }
+  
+  /* Consonant tile with grid layout */
+  .glyph-consonant {
+    display:inline-grid;
+    grid-template-areas: 
+      "place manner"
+      "voice voice";
+    grid-template-columns:1fr 1fr;
+    gap:2px;
+    padding:10px;
+  }
+  .glyph-consonant .place { grid-area:place; font-size:20px; }
+  .glyph-consonant .manner { grid-area:manner; font-size:20px; }
+  .glyph-consonant .voice { grid-area:voice; font-size:14px; text-align:center; }
+  
+  /* Vowel display */
+  .glyph-vowel {
+    font-size:22px;
+    letter-spacing:2px;
+    padding:10px 12px;
+  }
+  .vowel-line { display:flex; gap:6px; align-items:center; }
+  .vowel-pos { font-size:22px; }
+  .vowel-height { font-size:20px; }
+  .vowel-round { font-size:16px; margin-left:2px; }
+  
+  /* Ligature (merged) display */
+  .glyph-ligature {
+    background:linear-gradient(135deg, #1f2937 0%, #16181f 100%);
+    border-color:#3a6dfa;
+    font-size:24px;
+    padding:10px 12px;
+  }
+  
+  /* Syllable block */
+  .syllable-block {
+    display:inline-flex;
+    flex-direction:column;
+    align-items:center;
+    border:2px solid #3a6dfa;
+    border-radius:12px;
+    padding:4px;
+    background:rgba(58, 109, 250, 0.05);
+  }
+  .syllable-label {
+    font-size:10px;
+    color:var(--sub);
+    margin-top:4px;
+  }
+  
+  /* Modifiers */
+  .mod-stress-primary { position:absolute; top:-10px; left:50%; transform:translateX(-50%); color:var(--warning); font-weight:bold; }
+  .mod-stress-secondary { position:absolute; top:-10px; left:50%; transform:translateX(-50%); color:var(--sub); }
+  .mod-length { position:absolute; bottom:-10px; left:50%; transform:translateX(-50%); color:var(--success); }
+  .mod-nasal { position:absolute; top:-8px; right:2px; color:#c9d2db; }
+  
+  /* Arrows for diphthongs */
+  .arrow-diph { color:var(--sub); margin:0 4px; font-size:20px; }
+  
+  /* Stats display */
+  .stats-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(120px, 1fr)); gap:10px; margin-top:12px; }
+  .stat-item { background:#0b0d12; padding:8px; border-radius:8px; text-align:center; }
+  .stat-value { font-size:24px; font-weight:bold; color:var(--success); }
+  .stat-label { font-size:12px; color:var(--sub); margin-top:2px; }
+  
+  table { width:100%; border-collapse:collapse; font-size:14px; }
+  th, td { border:1px solid var(--border); padding:8px 10px; text-align:left; }
+  th { background:#0b0d12; font-weight:600; }
+  .pill { display:inline-block; padding:3px 10px; border:1px solid var(--border); border-radius:999px; margin:2px; font-size:13px; color:var(--sub); background:#0b0d12; }
+  .example { color:var(--success); cursor:pointer; text-decoration:underline; }
+  .example:hover { opacity:0.8; }
+  footer { text-align:center; color:var(--sub); padding:26px; }
+  .toggle-group { display:inline-flex; border:1px solid var(--border); border-radius:8px; overflow:hidden; }
+  .toggle-group button { border-radius:0; border-right:1px solid var(--border); padding:8px 12px; }
+  .toggle-group button:last-child { border-right:none; }
+  
+  @media (max-width:920px) { main { grid-template-columns:1fr; } }
+</style>
+<header>
+  <h1>🔷 Unifea Playground – Ligature Edition</h1>
+  <p>Featural writing with intelligent ligatures and syllable clustering</p>
+</header>
+<main>
+  <section class="card">
+    <h2>Input (IPA)</h2>
+    <p style="color:var(--sub); font-size:14px;">
+      Try these: 
+      <span class="example" onclick="setExample('ˈɪŋglɪʃ')">English</span> • 
+      <span class="example" onclick="setExample('stɹeŋθ')">strength</span> • 
+      <span class="example" onclick="setExample('ˈskɹɪpt')">script</span> • 
+      <span class="example" onclick="setExample('juːnɪˈfaɪ')">unify</span> •
+      <span class="example" onclick="setExample('ˌɪntəˈnæʃənəl')">international</span>
+    </p>
+    <textarea id="ipa" placeholder="Type IPA here (e.g., ˈɪŋglɪʃ for 'English')"></textarea>
+    <div class="row" style="margin-top:10px">
+      <button onclick="convert()">Convert to Unifea</button>
+      <div class="toggle-group">
+        <button id="mode-radical" class="active" onclick="setMode('radical')">Radicals</button>
+        <button id="mode-visual" onclick="setMode('visual')">Visual</button>
+        <button id="mode-syllable" onclick="setMode('syllable')">Syllables</button>
+      </div>
+      <button class="secondary" onclick="toggleLigatures()" id="ligature-toggle">Ligatures: ON</button>
+      <button class="secondary" onclick="copyOut()">Copy</button>
+    </div>
+    <span id="status" style="color:var(--success); margin-left:8px; font-size:14px;"></span>
+  </section>
+
+  <section class="card">
+    <h2>Output</h2>
+    <div id="out-radical" style="display:block">
+      <pre id="out-text" style="min-height:180px"></pre>
+    </div>
+    <div id="out-visual" style="display:none">
+      <div class="visual-output" id="out-glyphs"></div>
+    </div>
+    <div id="out-syllable" style="display:none">
+      <div class="visual-output" id="out-syllables"></div>
+    </div>
+    
+    <div class="stats-grid">
+      <div class="stat-item">
+        <div class="stat-value" id="stat-phonemes">0</div>
+        <div class="stat-label">Phonemes</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value" id="stat-syllables">0</div>
+        <div class="stat-label">Syllables</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value" id="stat-ligatures">0</div>
+        <div class="stat-label">Ligatures</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value" id="stat-complexity">0</div>
+        <div class="stat-label">Complexity</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card" style="grid-column:1/-1">
+    <h2>📖 Enhanced Symbol System</h2>
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:20px;">
+      <div>
+        <h4 style="color:var(--accent)">Common Ligatures</h4>
+        <table style="font-size:13px;">
+          <tr><td>/st/</td><td>○| (merged stop)</td><td>Common onset cluster</td></tr>
+          <tr><td>/ŋg/</td><td>⋀∩ (velar nasal-stop)</td><td>Natural sequence</td></tr>
+          <tr><td>/ks/</td><td>⋀× (X-sound)</td><td>Velar + alveolar</td></tr>
+          <tr><td>/tr/</td><td>|≡ (alveolar tap)</td><td>Common cluster</td></tr>
+          <tr><td>/pl/</td><td>○⌢ (labial lateral)</td><td>Onset cluster</td></tr>
+        </table>
+      </div>
+      
+      <div>
+        <h4 style="color:var(--accent)">Syllable Structure Rules</h4>
+        <div class="pill">Onset + Nucleus + Coda = Block</div>
+        <div class="pill">Complex onsets merge visually</div>
+        <div class="pill">Diphthongs shown with arrows</div>
+        <div class="pill">Stress marks float above blocks</div>
+        <div class="pill">Length marks extend below</div>
+      </div>
+      
+      <div>
+        <h4 style="color:var(--accent)">Visual Hierarchy</h4>
+        <div style="background:#0b0d12; padding:12px; border-radius:8px;">
+          <div>1. Syllable blocks (largest)</div>
+          <div>2. Individual phonemes</div>
+          <div>3. Feature components</div>
+          <div>4. Modifiers (smallest)</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card" style="grid-column:1/-1">
+    <h2>Phoneme Inventory</h2>
+    <div id="inventory-display" style="max-height:300px; overflow-y:auto;">
+      <!-- Dynamically populated -->
+    </div>
+  </section>
+</main>
+
+<footer>
+  <p>Unifea Ligature System – Optimizing visual density through intelligent merging</p>
+  <p style="font-size:12px; margin-top:8px;">Common clusters create ligatures • Syllables group into blocks • Stress and length float as suprasegmentals</p>
+</footer>
+
+<script>
+// Mapping (same as user's, preserved)
+const MAP = {
+  "p": { rad: "○ + ┃", type:"C", place:"bilabial", manner:"stop", voiced:false },
+  "b": { rad: "○ + ┃ + •", type:"C", place:"bilabial", manner:"stop", voiced:true },
+  "t": { rad: "| + ┃", type:"C", place:"alveolar", manner:"stop", voiced:false },
+  "d": { rad: "| + ┃ + •", type:"C", place:"alveolar", manner:"stop", voiced:true },
+  "k": { rad: "⋀ + ┃", type:"C", place:"velar", manner:"stop", voiced:false },
+  "g": { rad: "⋀ + ┃ + •", type:"C", place:"velar", manner:"stop", voiced:true },
+  "ʔ": { rad: "˽ + ┃", type:"C", place:"glottal", manner:"stop", voiced:false },
+  "f": { rad: "⊂ + ~", type:"C", place:"labiodental", manner:"fricative", voiced:false },
+  "v": { rad: "⊂ + ~ + •", type:"C", place:"labiodental", manner:"fricative", voiced:true },
+  "θ": { rad: "¦ + ~", type:"C", place:"dental", manner:"fricative", voiced:false },
+  "ð": { rad: "¦ + ~ + •", type:"C", place:"dental", manner:"fricative", voiced:true },
+  "s": { rad: "| + ~", type:"C", place:"alveolar", manner:"fricative", voiced:false },
+  "z": { rad: "| + ~ + •", type:"C", place:"alveolar", manner:"fricative", voiced:true },
+  "ʃ": { rad: "∧ + ~", type:"C", place:"postalveolar", manner:"fricative", voiced:false },
+  "ʒ": { rad: "∧ + ~ + •", type:"C", place:"postalveolar", manner:"fricative", voiced:true },
+  "h": { rad: "˽ + ~", type:"C", place:"glottal", manner:"fricative", voiced:false },
+  "m": { rad: "○ + ∩ + •", type:"C", place:"bilabial", manner:"nasal", voiced:true },
+  "n": { rad: "| + ∩ + •", type:"C", place:"alveolar", manner:"nasal", voiced:true },
+  "ŋ": { rad: "⋀ + ∩ + •", type:"C", place:"velar", manner:"nasal", voiced:true },
+  "l": { rad: "| + ⌢ + •", type:"C", place:"alveolar", manner:"lateral", voiced:true },
+  "ɹ": { rad: "| + ⌣ + •", type:"C", place:"alveolar", manner:"approximant", voiced:true },
+  "r": { rad: "| + ≡≡ + •", type:"C", place:"alveolar", manner:"trill", voiced:true },
+  "w": { rad: "○ + ⌣ + •", type:"C", place:"bilabial", manner:"approximant", voiced:true },
+  "j": { rad: "∧ + ⌣ + •", type:"C", place:"palatal", manner:"approximant", voiced:true },
+  "i": { rad: "◐ + ▲", type:"V", front:"front", height:"close", rounded:false },
+  "ɪ": { rad: "◐ + ▲△", type:"V", front:"front", height:"near-close", rounded:false },
+  "e": { rad: "◐ + △", type:"V", front:"front", height:"mid", rounded:false },
+  "ɛ": { rad: "◐ + △▽", type:"V", front:"front", height:"open-mid", rounded:false },
+  "æ": { rad: "◐ + ▽▽", type:"V", front:"front", height:"near-open", rounded:false },
+  "a": { rad: "◐ + ▽", type:"V", front:"front", height:"open", rounded:false },
+  "ə": { rad: "◑ + △", type:"V", front:"central", height:"mid", rounded:false },
+  "ʌ": { rad: "◒ + △▽", type:"V", front:"back", height:"open-mid", rounded:false },
+  "ɔ": { rad: "◒ + △▽ + ○", type:"V", front:"back", height:"open-mid", rounded:true },
+  "o": { rad: "◒ + △ + ○", type:"V", front:"back", height:"mid", rounded:true },
+  "ʊ": { rad: "◒ + ▲△ + ○", type:"V", front:"back", height:"near-close", rounded:true },
+  "u": { rad: "◒ + ▲ + ○", type:"V", front:"back", height:"close", rounded:true },
+  "ɑ": { rad: "◒ + ▽", type:"V", front:"back", height:"open", rounded:false },
+  "aɪ": { rad: "(◐+▽) → (◐+▲)", type:"D" },
+  "aʊ": { rad: "(◐+▽) → (◒+▲+○)", type:"D" },
+  "eɪ": { rad: "(◐+△) → (◐+▲)", type:"D" },
+  "oʊ": { rad: "(◒+△+○) → (◒+▲+○)", type:"D" },
+  "ɔɪ": { rad: "(◒+△▽+○) → (◐+▲)", type:"D" }
+};
+
+const LIGATURES = {
+  "st": { symbol: "○|", name: "merged stop" },
+  "sp": { symbol: "○~", name: "spirant cluster" },
+  "sk": { symbol: "○⋀", name: "velar cluster" },
+  "pl": { symbol: "○⌢", name: "labial-lateral" },
+  "kl": { symbol: "⋀⌢", name: "velar-lateral" },
+  "pr": { symbol: "○≡", name: "labial-tap" },
+  "tr": { symbol: "|≡", name: "alveolar-tap" },
+  "kr": { symbol: "⋀≡", name: "velar-tap" },
+  "ks": { symbol: "⋀×", name: "x-sound" },
+  "ŋg": { symbol: "⋀∩", name: "velar sequence" },
+  "nd": { symbol: "|∩•", name: "nasal-stop" },
+  "nt": { symbol: "|∩", name: "nasal-stop" },
+  "mp": { symbol: "○∩", name: "labial sequence" },
+  "str": { symbol: "○|≡", name: "triple cluster" },
+  "spr": { symbol: "○~≡", name: "triple spirant" }
+};
+
+let currentMode = 'radical';
+let useLigatures = true;
+
+function setMode(mode) {
+  currentMode = mode;
+  ['radical', 'visual', 'syllable'].forEach(m => {
+    document.getElementById(`mode-${m}`).classList.toggle('active', m === mode);
+    document.getElementById(`out-${m}`).style.display = m === mode ? 'block' : 'none';
+  });
+}
+
+function toggleLigatures() {
+  useLigatures = !useLigatures;
+  document.getElementById('ligature-toggle').textContent = `Ligatures: ${useLigatures ? 'ON' : 'OFF'}`;
+  document.getElementById('ligature-toggle').classList.toggle('active', useLigatures);
+  convert();
+}
+
+function setExample(text) {
+  document.getElementById('ipa').value = text;
+  convert();
+}
+
+function findLigatures(tokens) {
+  if (!useLigatures) return tokens;
+  const result = [];
+  let i = 0;
+  while (i < tokens.length) {
+    let matched = false;
+    if (i + 2 < tokens.length) {
+      const triple = tokens[i] + tokens[i+1] + tokens[i+2];
+      if (LIGATURES[triple]) {
+        result.push({ kind: "ligature", original: triple, symbol: LIGATURES[triple].symbol, name: LIGATURES[triple].name });
+        i += 3; matched = true;
+      }
+    }
+    if (!matched && i + 1 < tokens.length) {
+      const pair = tokens[i] + tokens[i+1];
+      if (LIGATURES[pair]) {
+        result.push({ kind: "ligature", original: pair, symbol: LIGATURES[pair].symbol, name: LIGATURES[pair].name });
+        i += 2; matched = true;
+      }
+    }
+    if (!matched) { result.push(tokens[i]); i++; }
+  }
+  return result;
+}
+
+function detectSyllables(items) {
+  const syllables = [];
+  let current = { onset: [], nucleus: null, coda: [] };
+  let inNucleus = false;
+  for (let idx=0; idx<items.length; idx++) {
+    const item = items[idx];
+    if (item.kind === "space") {
+      if (current.nucleus) { syllables.push({...current}); current = { onset: [], nucleus: null, coda: [] }; inNucleus = false; }
+      continue;
+    }
+    if (item.kind === "V" || item.kind === "D") { current.nucleus = item; inNucleus = true; }
+    else if (item.kind === "C" || item.kind === "ligature") {
+      const next = items[idx+1];
+      if (!inNucleus) current.onset.push(item);
+      else if (next && (next.kind === "V" || next.kind === "D")) { syllables.push({...current}); current = { onset:[item], nucleus:null, coda:[] }; inNucleus = false; }
+      else current.coda.push(item);
+    }
+  }
+  if (current.nucleus) syllables.push(current);
+  return syllables;
+}
+
+function convert() {
+  const src = document.getElementById('ipa').value.trim();
+  if (!src) { document.getElementById('status').textContent = "Please enter some IPA text"; return; }
+  
+  const tokens = [];
+  let i = 0;
+  const modifiers = ['ː', '̃', 'ʰ', 'ʷ', 'ʲ', 'ˤ', 'ˈ', 'ˌ'];
+  const multi = ['aɪ', 'aʊ', 'eɪ', 'oʊ', 'ɔɪ'];
+  while (i < src.length) {
+    if (src[i] === ' ') { tokens.push({ kind: "space" }); i++; continue; }
+    if (modifiers.includes(src[i])) { tokens.push({ kind: "modifier", value: src[i] }); i++; continue; }
+    let matched = false;
+    for (const m of multi) { if (src.slice(i, i+m.length) === m) { tokens.push(m); i += m.length; matched = true; break; } }
+    if (!matched) { tokens.push(src[i]); i++; }
+  }
+  
+  const withLigatures = findLigatures(tokens);
+  const items = [];
+  for (const t of withLigatures) {
+    if (typeof t === 'object' && t.kind) { items.push(t); continue; }
+    if (typeof t === 'string') {
+      const entry = MAP[t];
+      if (entry) items.push({ kind: entry.type, entry, mods: [] });
+      else items.push({ kind: "unknown", text: t });
+    }
+  }
+  
+  // attach modifiers to the previous non-space item
+  for (let k = 0; k < tokens.length; k++) {
+    if (tokens[k] && tokens[k].kind === "modifier") {
+      for (let j = items.length - 1; j >= 0; j--) {
+        if (items[j].kind !== "space" && items[j].kind !== "modifier") {
+          (items[j].mods || (items[j].mods = [])).push(tokens[k].value);
+          break;
+        }
+      }
+    }
+  }
+  
+  const radicalParts = items.map(item => {
+    if (item.kind === "space") return "  ";
+    if (item.kind === "unknown") return `[${item.text}]`;
+    if (item.kind === "ligature") return `{${item.symbol}}`;
+    if (item.kind === "D") return `(${item.entry.rad})`;
+    if (item.kind === "C" || item.kind === "V") {
+      let txt = `(${item.entry.rad})`;
+      if (item.mods && item.mods.length) txt += `[${item.mods.join('')}]`;
+      return txt;
+    }
+    return '';
+  });
+  document.getElementById('out-text').textContent = radicalParts.join(' ');
+  
+  const visualParts = items.map(item => renderGlyph(item));
+  document.getElementById('out-glyphs').innerHTML = visualParts.join('');
+  
+  const syllables = detectSyllables(items);
+  const syllableParts = syllables.map((syl, idx) => renderSyllable(syl, idx));
+  document.getElementById('out-syllables').innerHTML = syllableParts.join('');
+  
+  const phonemeCount = items.filter(i => i.kind === "C" || i.kind === "V" || i.kind === "D").length;
+  const ligatureCount = items.filter(i => i.kind === "ligature").length;
+  const complexity = Math.round((phonemeCount + ligatureCount * 2) / (syllables.length || 1));
+  document.getElementById('stat-phonemes').textContent = phonemeCount;
+  document.getElementById('stat-syllables').textContent = syllables.length;
+  document.getElementById('stat-ligatures').textContent = ligatureCount;
+  document.getElementById('stat-complexity').textContent = complexity;
+  
+  const unknownCount = items.filter(i => i.kind === "unknown").length;
+  let statusMsg = `Converted ${phonemeCount} phonemes`;
+  if (ligatureCount > 0) statusMsg += `, ${ligatureCount} ligatures`;
+  if (unknownCount > 0) statusMsg += ` (${unknownCount} unknown)`;
+  document.getElementById('status').textContent = statusMsg;
+}
+
+function renderGlyph(item) {
+  if (item.kind === "space") return '<span style="width:8px;display:inline-block"></span>';
+  if (item.kind === "unknown") return `<span class="pill">${item.text}</span>`;
+  if (item.kind === "ligature") return `<span class="glyph-base glyph-ligature" title="${item.name}">${item.symbol}</span>`;
+  if (item.kind === "D") return renderDiphthong(item);  // updated to no '+' and no parentheses
+  if (item.kind === "C") return renderConsonant(item);
+  if (item.kind === "V") return renderVowel(item);
+  return '';
+}
+
+// STRICT no-plus consonant renderer
+function renderConsonant(item) {
+  const placeMap = {
+    "bilabial": "○", "labiodental": "⊂", "dental": "¦", "alveolar": "|",
+    "retroflex": "⌐", "palatal": "∧", "postalveolar": "∧", "velar": "⋀", 
+    "uvular": "∪", "pharyngeal": "ˬ", "glottal": "˽"
+  };
+  const mannerMap = {
+    "stop": "┃", "fricative": "~", "nasal": "∩", "affricate": "›",
+    "approximant": "⌣", "lateral": "⌢", "trill": "≡≡", "tap": "≡"
+  };
+  const place = placeMap[item.entry.place] || "";
+  const manner = mannerMap[item.entry.manner] || "";
+  const voice = item.entry.voiced ? "•" : "";
+  let html = `<span class="glyph-base glyph-consonant">`;
+  if (item.mods?.includes('ˈ')) html += `<span class="mod-stress-primary">ˈ</span>`;
+  if (item.mods?.includes('ˌ')) html += `<span class="mod-stress-secondary">ˌ</span>`;
+  if (item.mods?.includes('ː')) html += `<span class="mod-length">ː</span>`;
+  html += `<span class="place">${place}</span>`;
+  html += `<span class="manner">${manner}</span>`;
+  html += `<span class="voice">${voice}</span>`;
+  html += `</span>`;
+  return html.replace(/\+/g, ''); // defensive
+}
+
+// NEW: no-plus vowel renderer
+function renderVowel(item) {
+  const pos = {"front":"◐","central":"◑","back":"◒"}[item.entry.front] || "◑";
+  const h = item.entry.height;
+  const hGlyph = (h === "close") ? "▲"
+               : (h === "mid") ? "△"
+               : (h === "open") ? "▽"
+               : (h === "near-close") ? "▲△"
+               : (h === "open-mid") ? "△▽"
+               : (h === "near-open") ? "▽▽"
+               : "△";
+  const round = item.entry.rounded ? "○" : "";
+  let html = `<span class="glyph-base glyph-vowel">`;
+  if (item.mods?.includes('ˈ')) html += `<span class="mod-stress-primary">ˈ</span>`;
+  if (item.mods?.includes('ˌ')) html += `<span class="mod-stress-secondary">ˌ</span>`;
+  if (item.mods?.includes('ː')) html += `<span class="mod-length">ː</span>`;
+  if (item.mods?.includes('̃')) html += `<span class="mod-nasal">~</span>`;
+  html += `<span class="vowel-line"><span class="vowel-pos">${pos}</span><span class="vowel-height">${hGlyph}</span><span class="vowel-round">${round}</span></span>`;
+  html += `</span>`;
+  return html;
+}
+
+// NEW: no-plus diphthong renderer (parse components and compose two vowel blocks)
+function renderDiphthong(item) {
+  function parsePart(partStr) {
+    const pos = (/[◐◑◒]/.exec(partStr) || ["◑"])[0];
+    // Height can be a sequence like ▲△ or △▽
+    const heightSeq = (/[▲△▽]{1,2}/.exec(partStr) || ["△"])[0];
+    const rounded = /○/.test(partStr) ? "○" : "";
+    return { pos, heightSeq, rounded };
+  }
+  const parts = item.entry.rad.split('→').map(s => s.trim());
+  const A = parsePart(parts[0]);
+  const B = parsePart(parts[1]);
+  const tile = (P) => `<span class="glyph-base glyph-vowel"><span class="vowel-line"><span class="vowel-pos">${P.pos}</span><span class="vowel-height">${P.heightSeq}</span><span class="vowel-round">${P.rounded}</span></span></span>`;
+  return `${tile(A)}<span class="arrow-diph">→</span>${tile(B)}`;
+}
+
+function renderSyllable(syl, idx) {
+  let html = `<span class="syllable-block">`;
+  for (const item of syl.onset) html += renderGlyph(item);
+  if (syl.nucleus) html += renderGlyph(syl.nucleus);
+  for (const item of syl.coda) html += renderGlyph(item);
+  html += `<span class="syllable-label">σ${idx + 1}</span>`;
+  html += `</span>`;
+  return html;
+}
+
+function copyOut() {
+  let txt = '';
+  if (currentMode === 'radical') txt = document.getElementById('out-text').textContent;
+  else if (currentMode === 'visual') txt = document.getElementById('out-glyphs').textContent;
+  else txt = document.getElementById('out-syllables').textContent;
+  navigator.clipboard.writeText(txt).then(() => {
+    const el = document.getElementById('status');
+    el.textContent = "Copied to clipboard!";
+    setTimeout(() => el.textContent = "", 1500);
+  });
+}
+
+window.addEventListener('load', () => {
+  const ipa = document.getElementById('ipa');
+  if (ipa.value) convert();
+  const inventory = document.getElementById('inventory-display');
+  const consonants = Object.entries(MAP).filter(([k,v]) => v.type === "C");
+  const vowels = Object.entries(MAP).filter(([k,v]) => v.type === "V");
+  let html = '<div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">';
+  html += '<div><h4>Consonants</h4><table style="font-size:12px;"><thead><tr><th>IPA</th><th>Radicals</th><th>Features</th></tr></thead><tbody>';
+  consonants.forEach(([ipa, data]) => { html += `<tr><td>${ipa}</td><td>${data.rad}</td><td>${data.place}, ${data.manner}${data.voiced ? ', voiced' : ''}</td></tr>`; });
+  html += '</tbody></table></div>';
+  html += '<div><h4>Vowels</h4><table style="font-size:12px;"><thead><tr><th>IPA</th><th>Radicals</th><th>Features</th></tr></thead><tbody>';
+  vowels.forEach(([ipa, data]) => { html += `<tr><td>${ipa}</td><td>${data.rad}</td><td>${data.front}, ${data.height}${data.rounded ? ', rounded' : ''}</td></tr>`; });
+  html += '</tbody></table></div>';
+  html += '</div>';
+  inventory.innerHTML = html;
+});
+</script>
+</html>
